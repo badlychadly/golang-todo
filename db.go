@@ -24,14 +24,14 @@ func (db *LDB) Initialize(filepath string)  {
 	defer db.Close()
 
 	err := db.Lists.Update(func(txn *bolt.Tx) error {
-		lb, err := txn.CreateBucketIfNotExists([]byte("LIST"))
+		_, err := txn.CreateBucketIfNotExists([]byte("LISTS"))
 		if err != nil {
 			return err
 		}
-		_, err = lb.CreateBucketIfNotExists([]byte("ITEM"))
-		if err != nil {
-			return err
-		}
+		// _, err = lb.CreateBucketIfNotExists([]byte("ITEM"))
+		// if err != nil {
+		// 	return err
+		// }
 		return nil
 	})
 	if err == nil {
@@ -63,19 +63,28 @@ func (db *LDB) CreateList(list *List) (err error) {
 	defer db.Close()
 
 	err = db.Lists.Update(func(txn *bolt.Tx) error {
-		lb := txn.Bucket([]byte("LIST"))
-		id, err := lb.NextSequence()
+		lsb := txn.Bucket([]byte("LISTS"))
+		id, err := lsb.NextSequence()
 		if err != nil {
 			return err
 		}
 		if err = list.FmtId(id); err != nil {
 			return err
 		}
+		lb, err := lsb.CreateBucketIfNotExists(itob(list.Id))
+		if err != nil {
+			return err
+		}
+
+		
+		
 		// list.Id = strconv.Itoa(int(id))
 		listBytes, err := json.Marshal(list)
 		if err != nil {
 			return err
 		}
+		// err = lb.Put([]byte("Id"), itob(list.Id))
+		// err = lb.Put([]byte("Name"), []byte(list.Name))
 		err = lb.Put(itob(list.Id), listBytes)
 		if err != nil {
 			return err
@@ -93,11 +102,11 @@ func (db *LDB) ViewLists() (listSlice []List) {
 	// var listSlice []List
 
 	err := db.Lists.View(func(tx *bolt.Tx) error {
-		lb := tx.Bucket([]byte("LIST"))
-		c := lb.Cursor()
+		lsb := tx.Bucket([]byte("LISTS"))
+		c := lsb.Cursor()
 		var ok bool
 
-		listSlice, ok = GetAll(c, listSlice).([]List) 
+		listSlice, ok = GetAll(c, lsb, listSlice).([]List) 
 		if !ok {
 			err := fmt.Errorf("Did not Work %v", listSlice)
 			return err
@@ -129,18 +138,22 @@ func (db *LDB) ViewLists() (listSlice []List) {
 // 	return
 // }
 
-func GetAll(c *bolt.Cursor, objSlice interface{}) interface{} {
+func GetAll(c *bolt.Cursor, lsb *bolt.Bucket, objSlice interface{}) interface{} {
  
 	switch mainSlice := objSlice.(type) {
 		case []List:
 			for k, v := c.First(); k != nil; k, v = c.Next() {
+				lb := lsb.Bucket(k)
+				ld := lb.Get(k)
 				list := List{}
-				list.Name = string(v)
-				if err := list.FmtId(k); err != nil {
-					return mainSlice
+				err := json.Unmarshal(ld, &list)
+				if err != nil {
+					fmt.Errorf("error is: %v\n", err)
 				}
+				fmt.Printf("list data: %v, other value: %v\n", list, v)
+				
 				mainSlice = append(mainSlice, list)
-				fmt.Printf("key=%T, value=%s\n", k, v)
+				// fmt.Printf("key=%T, value=%s\n", k, list.Name)
 			}
 			return mainSlice
 		case []Item:
@@ -189,6 +202,7 @@ func (db *LDB) ViewList(id string) (list List, err error) {
 
 		return nil
 	})
+
 	// empty := list.Empty()
 	// if err != nil {
 
@@ -196,6 +210,16 @@ func (db *LDB) ViewList(id string) (list List, err error) {
 	// fmt.Printf("emp: %v", err)
 	return
 }
+
+// func (db *LDB) GetListItems(list *List) (itemSlice []Items, err error) {
+// 	err = db.Lists.View(func(tx *bolt.Tx) error {
+// 		ib := tx.Bucket([]byte("LIST")).Bucket([]byte("ITEM"))
+// 		c := ib.Cursor()
+
+		
+
+// 	})
+// }
 
 
 
