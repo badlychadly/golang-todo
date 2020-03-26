@@ -10,7 +10,7 @@ import (
 type List struct {
 	Id uint16
 	Name string `json:"name"`
-	Items []*Item `json:"items"`
+	Items []Item `json:"items"`
 }
 
 func (list *List) FmtId(num interface{}) (err error) {
@@ -33,6 +33,9 @@ func (list *List) FmtId(num interface{}) (err error) {
 	}
 	return
 }
+
+
+
 
 func (list *List) Empty() (empty bool) {
 	fmt.Printf("list %v, empty %v\n", list.Id, empty)

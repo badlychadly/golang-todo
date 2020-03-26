@@ -8,15 +8,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func dMeth(myslice interface{}) {
-	arr, ok := myslice.([]int)
-	if ok {
-		fmt.Printf("my arr %v\n", arr )
-		// return
-	}
-	newArr := append(arr, 10)
-	fmt.Printf("out of Block %v\n", newArr )
-}
 
 
 func HomePage(w http.ResponseWriter, r *http.Request) {
@@ -24,7 +15,7 @@ func HomePage(w http.ResponseWriter, r *http.Request) {
 	for i, list := range lists {
 		fmt.Fprintf(w, "list: %v, i: %v\n", list, i)
 	}
-		// dMeth([]int{1,2,3,4,5})
+		// fmt.Fprintf(w, "Homepage")
 }
 
 
@@ -59,11 +50,6 @@ func HandleNewList(w http.ResponseWriter, r *http.Request) {
 func HandleListView(w http.ResponseWriter, r *http.Request) {
 	listId := mux.Vars(r)["id"]
 	list, err := DB.ViewList(listId)
-	// fmt.Printf("id Type: %v\n", listId)
-	// if list == (List{}) {
-	// 	fmt.Fprint(w, "No results found")
-	// 	return
-	// }
 
 	if err != nil {
 		fmt.Fprintf(w, "No results found %v\n", err)

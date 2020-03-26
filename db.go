@@ -28,10 +28,6 @@ func (db *LDB) Initialize(filepath string)  {
 		if err != nil {
 			return err
 		}
-		// _, err = lb.CreateBucketIfNotExists([]byte("ITEM"))
-		// if err != nil {
-		// 	return err
-		// }
 		return nil
 	})
 	if err == nil {
@@ -56,6 +52,22 @@ func (db *LDB) Close() {
 	db.Lists.Close()
 }
 
+type Bm struct {
+	Bucket *bolt.Bucket
+	Id interface{}
+	err error
+}
+
+func (bm *Bm) NextSequence() (err error) {
+	if id, err := bm.Bucket.NextSequence(); err != nil {
+		bm.err = fmt.Errorf("Problem getting next sequence in Bucket %v\n", err)
+		return bm.err
+	} else {
+		bm.Id = id
+	}
+	return
+}
+
 
 
 func (db *LDB) CreateList(list *List) (err error) {
@@ -63,28 +75,24 @@ func (db *LDB) CreateList(list *List) (err error) {
 	defer db.Close()
 
 	err = db.Lists.Update(func(txn *bolt.Tx) error {
-		lsb := txn.Bucket([]byte("LISTS"))
-		id, err := lsb.NextSequence()
-		if err != nil {
+		var lsb Bm
+		lsb.Bucket = txn.Bucket([]byte("LISTS"))
+		lsb.NextSequence()
+
+		if err = list.FmtId(lsb.Id); err != nil {
 			return err
 		}
-		if err = list.FmtId(id); err != nil {
-			return err
-		}
-		lb, err := lsb.CreateBucketIfNotExists(itob(list.Id))
+		lb, err := lsb.Bucket.CreateBucketIfNotExists(itob(list.Id))
 		if err != nil {
 			return err
 		}
 
-		
-		
-		// list.Id = strconv.Itoa(int(id))
+
 		listBytes, err := json.Marshal(list)
 		if err != nil {
 			return err
 		}
-		// err = lb.Put([]byte("Id"), itob(list.Id))
-		// err = lb.Put([]byte("Name"), []byte(list.Name))
+
 		err = lb.Put(itob(list.Id), listBytes)
 		if err != nil {
 			return err
@@ -98,8 +106,7 @@ func (db *LDB) CreateList(list *List) (err error) {
 func (db *LDB) ViewLists() (listSlice []List) {
 	db.Open()
 	defer db.Close()
-	// var btoi uint64
-	// var listSlice []List
+
 
 	err := db.Lists.View(func(tx *bolt.Tx) error {
 		lsb := tx.Bucket([]byte("LISTS"))
@@ -111,11 +118,7 @@ func (db *LDB) ViewLists() (listSlice []List) {
 			err := fmt.Errorf("Did not Work %v", listSlice)
 			return err
 		}
-		// listSlice = GetAll(c)
-		// if listSlice == nil {
-		// 	err := fmt.Errorf("Empty set returned")
-		// 	return err
-		// }
+
 		return nil
 	})
 	// fmt.Printf("the list: %v", listSlice)
@@ -125,18 +128,6 @@ func (db *LDB) ViewLists() (listSlice []List) {
 	return
 }
 
-// func GetAll(c *bolt.Cursor) (listSlice []List){
-// 	for k, v := c.First(); k != nil; k, v = c.Next() {
-// 		// btoi := binary.BigEndian.Uint16(k)
-// 		list := List{Name: string(v)}
-// 		if err := list.FmtId(k); err != nil {
-// 			return listSlice
-// 		}
-// 		listSlice = append(listSlice, list)
-// 		fmt.Printf("key=%T, value=%s\n", k, v)
-// 	}
-// 	return
-// }
 
 func GetAll(c *bolt.Cursor, lsb *bolt.Bucket, objSlice interface{}) interface{} {
  
@@ -230,7 +221,7 @@ func (db *LDB) DeleteList(id string) (err error) {
 	db.Open()
 	defer db.Close()
 	err = db.Lists.Update(func(tx *bolt.Tx) error {
-		lb := tx.Bucket([]byte("LIST"))
+		lb := tx.Bucket([]byte("LISTS"))
 		intId, _ := strconv.Atoi(id)
 		err = lb.Delete(itob(uint16(intId)))
 		if err != nil {
