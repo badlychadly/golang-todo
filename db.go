@@ -174,52 +174,55 @@ func GetAll(c *bolt.Cursor, lsb *bolt.Bucket, objSlice interface{}) interface{} 
 
 
 func (db *LDB) ViewList(id string) (list List, err error) {
+	var items []Item
 	db.Open()
 	defer db.Close()
 	err = db.Lists.View(func(tx *bolt.Tx) error {
-		lb := tx.Bucket([]byte("LIST"))
-		// c := lb.Cursor()
 		intId, err := strconv.Atoi(id)
 		if err != nil {
 			err = fmt.Errorf("Error converting to Integer %v", err)
 			return err
 		}
-		v := lb.Get(itob(uint16(intId)))
-		if v != nil {
-			// fmt.Printf("intId: %T\n", intId)
-			list = List{Name: string(v)}
-			list.FmtId(intId)
-		} else {
+		lb := tx.Bucket([]byte("LISTS")).Bucket(itob(uint16(intId)))
+		
+
+		if lv := lb.Get(itob(uint16(intId))); lv == nil {
 			err = fmt.Errorf("No List with id %v\n", intId)
 			return err
+		} else {
+			if err = json.Unmarshal(lv, &list); err != nil {
+				err = fmt.Errorf("error: %v\n", err)
+				return err
+			}
+	
+			if items, err = GetListItems(lb); err == nil {
+				list.Items = items
+			} 
 		}
-		// for k, v := c.Seek(itob(uint16(intId))); k != nil && bytes.HasPrefix(k, itob(uint16(intId))); k, v = c.Next() {
-		// 	// list = List{Id: binary.BigEndian.Uint16(k), Name: string(v)}
-		// 	list = List{Name: string(v)}
-		// 	list.FmtId(k)
-		// 	// fmt.Printf("value=%T\n", k)
-		// }
 
 		return nil
 	})
 
-	// empty := list.Empty()
-	// if err != nil {
-
-	// }
-	// fmt.Printf("emp: %v", err)
 	return
 }
 
-// func (db *LDB) GetListItems(list *List) (itemSlice []Items, err error) {
-// 	err = db.Lists.View(func(tx *bolt.Tx) error {
-// 		ib := tx.Bucket([]byte("LIST")).Bucket([]byte("ITEM"))
-// 		c := ib.Cursor()
 
+func GetListItems(lb *bolt.Bucket) (itemSlice []Item, err error) {
+	ib := lb.Bucket([]byte("ITEMS"))
+	c := ib.Cursor()
+
+	for k, v := c.First(); k != nil; k, v = c.Next() {
+		item := Item{}
+		err = json.Unmarshal(v, &item)
+		if err != nil {
+			err = fmt.Errorf("error is: %v\n", err)
+			return
+		}
 		
-
-// 	})
-// }
+		itemSlice = append(itemSlice, item)
+	}
+	return
+}
 
 
 
@@ -240,10 +243,16 @@ func (db *LDB) DeleteList(id string) (err error) {
 }
 
 func (db *LDB) CreateItem(item *Item, listId string) (err error){
+	lId, _ := strconv.Atoi(listId)
 	db.Open()
 	defer db.Close()
 	err = db.Lists.Update(func(tx *bolt.Tx) error {
-		ib := tx.Bucket([]byte("LIST")).Bucket([]byte("ITEM"))
+		lb := tx.Bucket([]byte("LISTS")).Bucket(itob(uint16(lId)))
+		ib, err := lb.CreateBucketIfNotExists([]byte("ITEMS"))
+		if err != nil {
+			// err = fmt.Errorf("Bucket ITEMS could not be created %v\n", err)
+			return err
+		}
 		itemId, err := ib.NextSequence()
 		if err != nil {
 			return err
