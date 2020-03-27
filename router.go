@@ -39,7 +39,9 @@ func HandleNewList(w http.ResponseWriter, r *http.Request) {
 	}
 	err = DB.CreateList(&list)
 	if err != nil {
-		fmt.Fprintf(w, "DB error")
+		// err, _ = fmt.Fprintf(w, "DB error %v\n", err)
+		json.NewEncoder(w).Encode(err.Error())
+		return
 	}
 	// listBytes, _ := json.Marshal(list)
 	// fmt.Fprintf(w, string(listBytes))
