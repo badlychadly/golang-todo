@@ -59,7 +59,7 @@ type Bm struct {
 }
 
 func (bm *Bm) NextSequence(errc chan error) {
-	if id, err := bm.Bucket.NextSequence(); err == nil {
+	if id, err := bm.Bucket.NextSequence(); err != nil {
 		bm.err = fmt.Errorf("Problem getting next sequence in Bucket %v\n", err)
 		errc <- bm.err
 		return 
