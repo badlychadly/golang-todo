@@ -65,10 +65,12 @@ func (bm *Bm) NextSequence(errc chan error) {
 		return 
 	} else {
 		bm.Id = id
-		errc <- nil
+		// errc <- nil
 	}
 	return
 }
+
+// func (bm *Bm) CreateBucket(indexKey []byte, )
 
 
 
@@ -77,40 +79,39 @@ func (db *LDB) CreateList(list *List) (err error) {
 	defer db.Close()
 
 	errc := make(chan error, 1)
-	go func() {
-			err = db.Lists.Update(func(txn *bolt.Tx) error {
-				var lsb Bm
+	err = db.Lists.Update(func(txn *bolt.Tx) error {
+		go func() {
 			defer close(errc)
+			var lsb Bm
 			lsb.Bucket = txn.Bucket([]byte("LISTS"))
 			lsb.NextSequence(errc)
 	
-			if err = list.FmtId(lsb.Id); err != nil {
-				return err
-			}
-			lb, err := lsb.Bucket.CreateBucketIfNotExists(itob(list.Id))
-			if err != nil {
-				return err
-			}
+			list.FmtId(lsb.Id, errc)
+				
+			// lb, err := lsb.Bucket.CreateBucketIfNotExists(itob(list.Id))
+			// if err != nil {
+			// 	return err
+			// }
 	
 	
-			listBytes, err := json.Marshal(list)
-			if err != nil {
-				return err
-			}
+			// listBytes, err := json.Marshal(list)
+			// if err != nil {
+			// 	return err
+			// }
 	
-			err = lb.Put(itob(list.Id), listBytes)
-			if err != nil {
-				return err
-			}
+			// err = lb.Put(itob(list.Id), listBytes)
+			// if err != nil {
+			// 	return err
+			// }
 
 			// err = <-errc
-			return err
+			}()
+			return nil
 		})
-		}()
 		err = <-errc 
 	if err != nil {
-		// fmt.Printf("New Error %v\n", <-errc)
-		return 
+		fmt.Printf("New Error %v\n", err)
+		return err
 		
 	}
 	fmt.Println("New list added")

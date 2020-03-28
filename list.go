@@ -13,24 +13,24 @@ type List struct {
 	Items []Item `json:"items"`
 }
 
-func (list *List) FmtId(num interface{}) (err error) {
+func (list *List) FmtId(num interface{}, errc chan error) {
 	switch v := num.(type) {
 		case []uint8:
 			list.Id = binary.BigEndian.Uint16(v)
-			return
 		case uint16: 
 			list.Id = v
-			return
 		case uint64:
 			id := uint16(v)
 			list.Id = id
-			return
 		case int:
 			list.Id = uint16(v)
 		default:
-			err = fmt.Errorf("Unaccepted type")
+			fmt.Printf("num val %v\n", v)
+			
+			errc <- fmt.Errorf("Unaccepted type %v\n", v)
 			return
 	}
+	errc <- nil
 	return
 }
 

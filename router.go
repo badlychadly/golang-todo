@@ -38,9 +38,9 @@ func HandleNewList(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "decoder failed")
 	}
 	err = DB.CreateList(&list)
+	fmt.Printf("HNL err: %v\n", err)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		// err, _ = fmt.Fprintf(w, "DB error %v\n", err)
 		json.NewEncoder(w).Encode(err.Error())
 		return
 	}
