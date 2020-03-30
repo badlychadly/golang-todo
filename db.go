@@ -70,7 +70,15 @@ func (bm *Bm) NextSequence(errc chan error) {
 	return
 }
 
-// func (bm *Bm) CreateBucket(indexKey []byte, )
+func (bm *Bm) CreateBucket(indexKey []byte, errc chan error ) {
+	lb, err := bm.Bucket.CreateBucketIfNotExists(indexKey)
+	if err != nil {
+		errc <- fmt.Errorf("Could not create bucket: %v\n", err)
+		return 
+	}
+	bm.Bucket = lb
+
+}
 
 
 
@@ -88,6 +96,7 @@ func (db *LDB) CreateList(list *List) (err error) {
 	
 			list.FmtId(lsb.Id, errc)
 				
+			lsb.CreateBucket(itob(list.Id), errc)
 			// lb, err := lsb.Bucket.CreateBucketIfNotExists(itob(list.Id))
 			// if err != nil {
 			// 	return err
@@ -104,11 +113,12 @@ func (db *LDB) CreateList(list *List) (err error) {
 			// 	return err
 			// }
 
-			// err = <-errc
 			}()
-			return nil
+			err = <-errc
+			// fmt.Printf("test error: %T\n", err)
+			return err
 		})
-		err = <-errc 
+		// err = <-errc 
 	if err != nil {
 		fmt.Printf("New Error %v\n", err)
 		return err
