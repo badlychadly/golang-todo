@@ -64,7 +64,7 @@ func (bm *Bm) NextSequence(errc chan error) {
 		errc <- bm.err
 		return 
 	} else {
-		bm.Id = id
+		bm.Id = uint16(id)
 		// errc <- nil
 	}
 	return
@@ -78,6 +78,16 @@ func (bm *Bm) CreateBucket(indexKey []byte, errc chan error ) {
 	}
 	bm.Bucket = lb
 
+}
+
+func (bm *Bm) Put(obj []byte, errc chan error) {
+	err := bm.Bucket.Put(itob(bm.Id), obj)
+	if err != nil {
+		errc <- err
+		return 
+	}
+	// fmt.Printf("type bm.Id: %T\n", bm.Id)
+	return
 }
 
 
@@ -97,25 +107,18 @@ func (db *LDB) CreateList(list *List) (err error) {
 			list.FmtId(lsb.Id, errc)
 				
 			lsb.CreateBucket(itob(list.Id), errc)
-			// lb, err := lsb.Bucket.CreateBucketIfNotExists(itob(list.Id))
-			// if err != nil {
-			// 	return err
-			// }
-	
-	
-			// listBytes, err := json.Marshal(list)
-			// if err != nil {
-			// 	return err
-			// }
-	
-			// err = lb.Put(itob(list.Id), listBytes)
-			// if err != nil {
-			// 	return err
-			// }
 
+	
+	
+			listBytes, err := json.Marshal(list)
+			if err != nil {
+				return 
+			}
+	
+			lsb.Put(listBytes, errc)
+			
 			}()
 			err = <-errc
-			// fmt.Printf("test error: %T\n", err)
 			return err
 		})
 		// err = <-errc 
@@ -293,8 +296,14 @@ func (db *LDB) CreateItem(item *Item, listId string) (err error){
 
 
 
-func itob(v uint16) []byte {
-    b := make([]byte, 8)
-	binary.BigEndian.PutUint16(b, uint16(v))
+func itob(num interface{}) []byte {
+	b := make([]byte, 8)
+	switch v := num.(type) {
+	case uint64:
+		binary.BigEndian.PutUint16(b, uint16(v))
+		return b
+	case uint16:
+		binary.BigEndian.PutUint16(b, uint16(v))
+	}
     return b
 }
