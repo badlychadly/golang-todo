@@ -63,21 +63,21 @@ func (db *LDB) CreateList(list *List) (err error) {
 	err = db.Lists.Update(func(txn *bolt.Tx) error {
 		go func() {
 			defer close(errc)
-			var lsb Bm
-			lsb.Bucket = txn.Bucket([]byte("LISTS"))
-			lsb.NextSequence(errc)
+			var bm Bm
+			bm.Bucket = txn.Bucket([]byte("LISTS"))
+			bm.NextSequence(errc)
 	
-			list.FmtId(lsb.Id, errc)
+			list.FmtId(bm.Id, errc)
 				
-			lsb.CreateBucket(itob(list.Id), errc)
+			bm.CreateBucket(itob(list.Id), errc)
 
 			listBytes, err := json.Marshal(list)
 			if err != nil {
 				return 
 			}
-			lsb.Put(listBytes, errc)	
+			bm.Put(listBytes, errc)	
 		}()
-			err = ChannelListener(errc)
+			err = ListenToChan(errc)
 
 		return err
 	})
@@ -267,7 +267,7 @@ func itob(num interface{}) []byte {
 }
 
 
-func ChannelListener(ch chan error) (err error) {
+func ListenToChan(ch chan error) (err error) {
 	for err = range ch {
 		fmt.Printf("Cl error: %v\n", err)
 		if err != nil {
