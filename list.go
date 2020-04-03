@@ -14,6 +14,7 @@ type List struct {
 }
 
 func (list *List) FmtId(num interface{}, errc chan error) {
+	// fmt.Printf("in FmtId %T\n", num)
 	switch v := num.(type) {
 		case []uint8:
 			list.Id = binary.BigEndian.Uint16(v)
@@ -30,7 +31,6 @@ func (list *List) FmtId(num interface{}, errc chan error) {
 			errc <- fmt.Errorf("Unaccepted type %v\n", v)
 			return
 	}
-	errc <- nil
 	return
 }
 

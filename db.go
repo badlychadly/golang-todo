@@ -52,43 +52,6 @@ func (db *LDB) Close() {
 	db.Lists.Close()
 }
 
-type Bm struct {
-	Bucket *bolt.Bucket
-	Id interface{}
-	err error
-}
-
-func (bm *Bm) NextSequence(errc chan error) {
-	if id, err := bm.Bucket.NextSequence(); err != nil {
-		bm.err = fmt.Errorf("Problem getting next sequence in Bucket %v\n", err)
-		errc <- bm.err
-		return 
-	} else {
-		bm.Id = uint16(id)
-		// errc <- nil
-	}
-	return
-}
-
-func (bm *Bm) CreateBucket(indexKey []byte, errc chan error ) {
-	lb, err := bm.Bucket.CreateBucketIfNotExists(indexKey)
-	if err != nil {
-		errc <- fmt.Errorf("Could not create bucket: %v\n", err)
-		return 
-	}
-	bm.Bucket = lb
-
-}
-
-func (bm *Bm) Put(obj []byte, errc chan error) {
-	err := bm.Bucket.Put(itob(bm.Id), obj)
-	if err != nil {
-		errc <- err
-		return 
-	}
-	// fmt.Printf("type bm.Id: %T\n", bm.Id)
-	return
-}
 
 
 
@@ -108,24 +71,19 @@ func (db *LDB) CreateList(list *List) (err error) {
 				
 			lsb.CreateBucket(itob(list.Id), errc)
 
-	
-	
 			listBytes, err := json.Marshal(list)
 			if err != nil {
 				return 
 			}
-	
-			lsb.Put(listBytes, errc)
-			
-			}()
-			err = <-errc
-			return err
-		})
-		// err = <-errc 
+			lsb.Put(listBytes, errc)	
+		}()
+			err = ChannelListener(errc)
+
+		return err
+	})
 	if err != nil {
 		fmt.Printf("New Error %v\n", err)
-		return err
-		
+		return err	
 	}
 	fmt.Println("New list added")
 	return
@@ -306,4 +264,15 @@ func itob(num interface{}) []byte {
 		binary.BigEndian.PutUint16(b, uint16(v))
 	}
     return b
+}
+
+
+func ChannelListener(ch chan error) (err error) {
+	for err = range ch {
+		fmt.Printf("Cl error: %v\n", err)
+		if err != nil {
+			return
+		}
+	}
+	return 
 }
