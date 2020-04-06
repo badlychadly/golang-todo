@@ -10,6 +10,7 @@ import (
 type Bm struct {
 	Bucket *bolt.Bucket
 	Id interface{}
+	ChildBucket *bolt.Bucket
 	err error
 }
 
@@ -43,9 +44,27 @@ func (bm *Bm) CreateBucket(indexKey []byte, errc chan error ) {
 
 }
 
+
+func (bm *Bm) CreateChildBucket(name string, errc chan error) {
+	if bm.err != nil {return}
+	ib, err := bm.Bucket.CreateBucketIfNotExists([]byte(name))
+	if err != nil {
+		bm.err = fmt.Errorf("Could not create Child Bucket: %v\n", err)
+		errc <- bm.err 
+		return
+	}
+	bm.ChildBucket = ib
+	return
+}
+
+
 func (bm *Bm) Put(obj []byte, errc chan error) {
 	if bm.err != nil {return}
 	fmt.Printf("inside Put\n")
+	if obj == nil {
+		errc <- fmt.Errorf("Empty byte slice")
+		return
+	}
 	err := bm.Bucket.Put(itob(bm.Id), obj)
 	if err != nil {
 		errc <- fmt.Errorf("failed to add Data %v\n", err)

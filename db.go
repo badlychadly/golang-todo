@@ -70,12 +70,8 @@ func (db *LDB) CreateList(list *List) (err error) {
 			list.FmtId(bm.Id, errc)
 				
 			bm.CreateBucket(itob(list.Id), errc)
-
-			listBytes, err := json.Marshal(list)
-			if err != nil {
-				return 
-			}
-			bm.Put(listBytes, errc)	
+			bm.CreateChildBucket("ITEMS", errc)
+			bm.Put(list.ToBytes(), errc)	
 		}()
 			err = ListenToChan(errc)
 

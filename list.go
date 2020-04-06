@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "encoding/json"
+	"encoding/json"
 	"encoding/binary"
 	"fmt"
 	// "strconv"
@@ -35,9 +35,19 @@ func (list *List) FmtId(num interface{}, errc chan error) {
 }
 
 
-
-
-func (list *List) Empty() (empty bool) {
-	fmt.Printf("list %v, empty %v\n", list.Id, empty)
+func (list *List) ToBytes() (listBytes []byte) {
+	listBytes, err := json.Marshal(list)
+	if err != nil {
+		return 
+	}
 	return
+}
+
+
+
+
+func (list *List) Empty() bool {
+	// fmt.Printf("list %v, empty %v\n", list.Id, empty)
+	
+	return list.Name == ""
 }

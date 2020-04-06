@@ -36,6 +36,12 @@ func HandleNewList(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&list)
 	if err != nil {
 		fmt.Fprintf(w, "decoder failed")
+		return
+	}
+	if list.Empty() {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Empty Fieldset")
+		return
 	}
 	err = DB.CreateList(&list)
 	fmt.Printf("HNL err: %v\n", err)
