@@ -55,6 +55,7 @@ func (db *LDB) Close() {
 
 
 
+
 func (db *LDB) CreateList(list *List) (err error) {
 	db.Open()
 	defer db.Close()
@@ -89,19 +90,26 @@ func (db *LDB) ViewLists() (listSlice []List) {
 	db.Open()
 	defer db.Close()
 
-
+	errc := make(chan error, 1)
 	err := db.Lists.View(func(tx *bolt.Tx) error {
-		lsb := tx.Bucket([]byte("LISTS"))
-		c := lsb.Cursor()
-		var ok bool
+		go func(){
+			defer close(errc)
+			var bm Bm
+			bm.Bucket = tx.Bucket([]byte("LISTS"))
+			// lsb := tx.Bucket([]byte("LISTS"))
+			c := bm.Bucket.Cursor()
+			var ok bool
+	
+			listSlice, ok = GetAll(c, bm.Bucket, listSlice).([]List) 
+			if !ok {
+				// err := fmt.Errorf("Did not Work %v", listSlice)
+				return
+			}
 
-		listSlice, ok = GetAll(c, lsb, listSlice).([]List) 
-		if !ok {
-			err := fmt.Errorf("Did not Work %v", listSlice)
-			return err
-		}
+		}()
+		err := ListenToChan(errc)
 
-		return nil
+		return err
 	})
 	// fmt.Printf("the list: %v", listSlice)
 	if err != nil {

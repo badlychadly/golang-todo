@@ -30,7 +30,7 @@ func (item *Item) FmtId(num interface{}) (err error) {
 		case int:
 			item.Id = uint16(v)
 		default:
-			err = fmt.Errorf("Unaccepted type")
+			err = fmt.Errorf("Unaccepted type %T", num)
 			return
 	}
 	return
